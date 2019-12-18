@@ -21,30 +21,30 @@ MSG_TXT = '{{"{0}": {1}}}'
 THRESHOLD = 5
 
 parser = argparse.ArgumentParser(
-	description='CES race track demo script', 
-	)
+    description='CES race track demo script', 
+    )
 parser.add_argument('-d', '--debug', action='store_true',
-	help='enable output of debug messages',
-	default=False
-        )
+    help='enable output of debug messages',
+    default=False
+    )
 parser.add_argument('-c', '--constring',
-        help='connection string for Azure IoT Hub',
-        default=' '
-        )
+    help='connection string for Azure IoT Hub',
+    default=' '
+    )
 parser.add_argument('-p', '--fifopipe',
-        help='Named PIPE to use for reading data to be sent',
-        default=''
-        )
+    help='Named PIPE to use for reading data to be sent',
+    default=''
+    )
 parser.add_argument('-j', '--jpeg',
-        help='Picture Data File to be uploaded to Azure blob storage',
-        default='pic.jpg'
-        )
+    help='Picture Data File to be uploaded to Azure blob storage',
+    default='pic.jpg'
+    )
 
 #====================================================================================================================
 
 def do_debug(doit, msg):
-	if doit:
-		sys.stdout.write(msg)
+    if doit:
+        sys.stdout.write(msg)
 
 def iothub_client_init():
     # Create an IoT Hub client
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         os.mkfifo(fifopipe)
 
     except OSError as oe:
-	if os.errno != errno.EEXIST:
+        if os.errno != errno.EEXIST:
             raise
 
     print("               ")
@@ -118,38 +118,39 @@ if __name__ == '__main__':
         run = True
         while run:
             do_debug(args.debug, "Open "+fifopipe+" pipe\n")
-    	    with open(fifopipe) as fifo:
-    	        do_debug(args.debug, ' Opened\n')
-    	        while True:
-    		    data = fifo.read()
-    		    if len(data) == 0:
-    		        do_debug(args.debug, 'No more data in pipe\n')
-    		        break
-    		    else:
-    		        do_debug(args.debug, 'Read: "{}"\n'.format(data[:-1]))
-    		        indata = data.split(':')
+            with open(fifopipe) as fifo:
+                do_debug(args.debug, ' Opened\n')
+                while True:
+                    data = fifo.read()
+                    if len(data) == 0:
+                        do_debug(args.debug, 'No more data in pipe\n')
+                        break
+                    else:
+                        do_debug(args.debug, 'Read: "{}"\n'.format(data[:-1]))
+                        indata = data.split(':')
                         key = indata[0][1:]
-    		        value = indata[1][:-2]
-         	        if key == 'EOF':
-    			    do_debug(args.debug, 'close named pipe.\n')
-     			    run = False
-    			    break
-    		        if key == 'speed_kmph':
-    			    do_debug(args.debug, 'speed (in kmph) is {}\n'.format(value))
-    		        elif key == 'speed_mph':
-    			    do_debug(args.debug, 'speed (in mph) is {}\n'.format(value))
-    		        elif key == 'location_latitude':
-    			    do_debug(args.debug, 'latitude is {}\n'.format(value))
-        		elif key == 'location_longitude':
-        		    do_debug(args.debug, 'longitude is {}\n'.format(value))
-    		        else:
-    			    do_debug(args.debug, 'sending: {"'+key+'":"'+value+'"}\n')
+                        value = indata[1][:-2]
+                        if key == 'EOF':
+                            do_debug(args.debug, 'close named pipe.\n')
+                            run = False
+                            break
+
+                        if key == 'speed_kmph':
+                            do_debug(args.debug, 'speed (in kmph) is {}\n'.format(value))
+                        elif key == 'speed_mph':
+                            do_debug(args.debug, 'speed (in mph) is {}\n'.format(value))
+                        elif key == 'location_latitude':
+                            do_debug(args.debug, 'latitude is {}\n'.format(value))
+                        elif key == 'location_longitude':
+                            do_debug(args.debug, 'longitude is {}\n'.format(value))
+                        else:
+                            do_debug(args.debug, 'sending: {"'+key+'":"'+value+'"}\n')
                         msg = MSG_TXT.format(key, value)
-    		        message = Message(msg)
-    		        # Send the message.
-            	        do_debug(args.debug, 'Sending message: {}\n'.format(message) )
-    		        client.send_message(message)
-    		        do_debug(args.debug, 'Message sent\n' )
+                        message = Message(msg)
+                        # Send the message.
+                        do_debug(args.debug, 'Sending message: {}\n'.format(message) )
+                        client.send_message(message)
+                        do_debug(args.debug, 'Message sent\n' )
     
         fifo.close()
 
