@@ -1,6 +1,6 @@
-#Python CES Demo
+# Python CES Demo
 
-##Program Startup
+## Program Startup
 ```
 usage: ces_demo.py [-h] [-d] [-c CONSTRING] [-p FIFOPIPE] [-j JPEG]
 
@@ -36,6 +36,12 @@ Lately, you can monitor IoT Hub events being sent to Azure using the az CLI comm
 ```
 
 ## Example run results
+Start **ces_demo** script then enter:
+1. **echo "{jim:bob}" > jim** in seperate terminal session. 
+2. **az iot hub invoke-device-method -n PythonDemo -d MyPythonDevice --mn SetSpeedThreshold --mp 20** in seperate terminal session
+3. **echo "{EOF:EOF}" > jim**
+
+Program output is:
 ```
                
      ****      
@@ -64,4 +70,16 @@ Set (20)
 Read: "{EOF:EOF}"
 close named pipe.
 ```
+
+# IoT Hub events monitor output
+```
+Starting event monitor, filtering on device: MyPythonDevice, use ctrl-c to stop...
+{
+    "event": {
+        "origin": "MyPythonDevice",
+        "payload": "{\"jim\": bob}"
+    }
+}
+```
+
 
