@@ -1,4 +1,4 @@
-import argparse, os, errno
+import argparse, os, errno, uuid
 import sys, time
 import threading
 
@@ -6,6 +6,7 @@ import threading
 #   https://github.com/Azure/azure-iot-sdk-python
 # The sample connects to a device-specific MQTT endpoint on your IoT Hub.
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
 # Login to Azure using the CLI:
 # az login -u <username> -p <password>
@@ -17,7 +18,7 @@ from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 # Using the Azure CLI:
 # az iot hub device-identity show-connection-string --hub-name {YourIoTHubName} --device-id MyNodeDevice --output table
 
-MSG_TXT = '{{"{0}": {1}}}'
+MSG_TXT = '{{"{0}": "{1}"}}'
 THRESHOLD = 5
 
 parser = argparse.ArgumentParser(
@@ -35,9 +36,9 @@ parser.add_argument('-p', '--fifopipe',
     help='Named PIPE to use for reading data to be sent',
     default=''
     )
-parser.add_argument('-j', '--jpeg',
-    help='Picture Data File to be uploaded to Azure blob storage',
-    default='pic.jpg'
+parser.add_argument('-b', '--blobconstr',
+    help='Connect string for blob storage',
+    default=' '
     )
 
 #====================================================================================================================
@@ -45,6 +46,30 @@ parser.add_argument('-j', '--jpeg',
 def do_debug(doit, msg):
     if doit:
         sys.stdout.write(msg)
+
+def upload_pic( constr, pictname, picpath ):
+
+    container_name = pictname
+    if "." in pictname:
+        cname = pictname.split('.')
+        container_name = cname[0]
+
+    full_path_pic_name = os.path.join(picpath, pictname)
+    container_name = container_name + str(uuid.uuid4())
+
+    do_debug(args.debug, '\n--Blob Initialize:\n')
+    do_debug(args.debug, '     picture name: '+full_path_pic_name+'\n')
+    do_debug(args.debug, '   container name: '+container_name+'\n')
+    do_debug(args.debug, 'connection string: ['+constr+' ]\n\n')
+    service_client = BlobServiceClient.from_connection_string(constr)
+    container_client = service_client.create_container(container_name)
+
+    blob_client = service_client.get_blob_client(container=container_name, blob=full_path_pic_name)
+    do_debug(args.debug, 'Upload ' + full_path_pic_name + ' to ' + container_name + '\n')
+    with open(full_path_pic_name, "rb") as data:
+        blob_client.upload_blob(data)
+
+    return container_name
 
 def iothub_client_init():
     # Create an IoT Hub client
@@ -104,7 +129,6 @@ if __name__ == '__main__':
     print("              Debug: " + str(args.debug))
     print("  Connection string: [ " + args.constring + " ]")
     print("   Using named pipe: " + args.fifopipe)
-    print("Picture File set to: " + args.jpeg)
     print("    Speed Threshold: " + str(THRESHOLD))
 
     client = iothub_client_init()
@@ -135,7 +159,10 @@ if __name__ == '__main__':
                             run = False
                             break
 
-                        if key == 'speed_kmph':
+                        if key == 'pict':
+                            value = upload_pic( args.blobconstr, value, "" )
+                            do_debug(args.debug, 'sending: {"'+key+'":"'+value+'"}\n')
+                        elif key == 'speed_kmph':
                             do_debug(args.debug, 'speed (in kmph) is {}\n'.format(value))
                         elif key == 'speed_mph':
                             do_debug(args.debug, 'speed (in mph) is {}\n'.format(value))
